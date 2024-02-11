@@ -74,8 +74,8 @@
             vulkan-tools
             vulkan-headers
             vulkan-loader
-            vulkan-validation-layers
-            udev
+            #vulkan-validation-layers
+            #udev
             clang
             lld
 #             # If using an intel GPU
@@ -92,20 +92,27 @@
             # Rust
             rustup
             rustToolchain
-          ]) ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [ libiconv ]);
-          shellHook = ''
-            # Required
-            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath [
-              pkgs.alsaLib
-              pkgs.udev
-              pkgs.vulkan-loader
-            ]}"
-            # Aliases and other fluff/ease of use
-            alias runIntel="nixVulkanIntel cargo run"
-            alias runMommyIntel="nixVulkanIntel cargo mommy run"
-            onefetch
-            echo "Welcome to nix-hell uh nix-shell!"
-          '';
+          ]) ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+            libiconv
+            darwin.apple_sdk.frameworks.AppKit
+          ]);
+          shellHook =
+            ''
+                export LD_LIBRARY_PATH=$(rustc --print sysroot)/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH:/System/Library/Frameworks/;
+            '';
+#          shellHook = ''
+#            # Required
+#            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath [
+#              pkgs.alsaLib
+#              pkgs.udev
+#              pkgs.vulkan-loader
+#            ]}"
+#            # Aliases and other fluff/ease of use
+#            alias runIntel="nixVulkanIntel cargo run"
+#            alias runMommyIntel="nixVulkanIntel cargo mommy run"
+#            onefetch
+#            echo "Welcome to nix-hell uh nix-shell!"
+#          '';
         };
       });
     };
