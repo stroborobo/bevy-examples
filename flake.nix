@@ -70,7 +70,7 @@
             onefetch
             # Bevy
             pkg-config
-            alsa-lib
+            #alsa-lib
             vulkan-tools
             vulkan-headers
             vulkan-loader
