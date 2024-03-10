@@ -25,10 +25,10 @@ struct Player;
 #[derive(Component)]
 struct Collider;
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Reflect)]
 struct Velocity(Vec2);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct SlowZone {
     pub velocity_modifier: f32,
 }
@@ -38,6 +38,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
     commands.spawn((
+        Name::new("Slowzone"),
         SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(200.0, 250.0, 0.0),
@@ -57,6 +58,7 @@ fn setup(mut commands: Commands) {
     ));
 
     commands.spawn((
+        Name::new("Player"),
         SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, 1.0),
@@ -164,6 +166,8 @@ pub struct MovementPlugin;
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(DefaultPlugins)
+            .register_type::<Velocity>()
+            .register_type::<SlowZone>()
             .add_systems(Startup, setup)
             .add_systems(FixedUpdate, (input, slowzone, movement).chain());
     }
