@@ -7,15 +7,15 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
-    input::{keyboard::KeyCode, Input},
-    math::{Vec2, Vec3},
+    input::{keyboard::KeyCode, ButtonInput},
+    math::{bounding::{Aabb2d, BoundingVolume, IntersectsVolume}, Vec2, Vec3},
     prelude::{Deref, DerefMut},
     render::color::Color,
-    sprite::collide_aabb::collide,
     sprite::{Sprite, SpriteBundle},
     time::Time,
     transform::components::Transform,
     utils::*,
+    prelude::*,
     DefaultPlugins,
 };
 
@@ -75,23 +75,23 @@ fn setup(mut commands: Commands) {
     ));
 }
 
-fn input(keyboard_input: Res<Input<KeyCode>>, mut query: Query<&mut Velocity, With<Player>>) {
+fn input(keyboard_input: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Velocity, With<Player>>) {
     let mut player_velocity = query.single_mut();
     let diff = 5.0;
     if keyboard_input.pressed(KeyCode::Space) {
         player_velocity.x = 0.0;
         player_velocity.y = 0.0;
     }
-    if keyboard_input.pressed(KeyCode::Up) {
+    if keyboard_input.pressed(KeyCode::ArrowUp) {
         player_velocity.y += diff;
     }
-    if keyboard_input.pressed(KeyCode::Down) {
+    if keyboard_input.pressed(KeyCode::ArrowDown) {
         player_velocity.y -= diff;
     }
-    if keyboard_input.pressed(KeyCode::Left) {
+    if keyboard_input.pressed(KeyCode::ArrowLeft) {
         player_velocity.x -= diff;
     }
-    if keyboard_input.pressed(KeyCode::Right) {
+    if keyboard_input.pressed(KeyCode::ArrowRight) {
         player_velocity.x += diff;
     }
 }
@@ -101,13 +101,16 @@ fn slowzone(
     slowzone_query: Query<(&Transform, &SlowZone)>,
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
-    let player_size = player_transform.scale.truncate();
     for (transform, slowzone) in &slowzone_query {
-        let maybe_collision = collide(
-            player_transform.translation,
-            player_size,
-            transform.translation,
-            transform.scale.truncate(),
+        let maybe_collision = collide_with_side(
+            Aabb2d::new(
+                player_transform.translation.truncate(),
+                player_transform.scale.truncate() / 2.,
+            ),
+            Aabb2d::new(
+                transform.translation.truncate(),
+                transform.scale.truncate() / 2.,
+            ),
         );
         if let Some(_) = maybe_collision {
             player_velocity.y *= slowzone.velocity_modifier;
@@ -122,6 +125,39 @@ fn movement(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
         transform.translation.y += velocity.y * time.delta_seconds();
     }
 }
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+enum Collision {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+// Returns `Some` if `ball` collides with `wall`. The returned `Collision` is the
+// side of `wall` that `ball` hit.
+fn collide_with_side(player: Aabb2d, wall: Aabb2d) -> Option<Collision> {
+    if !player.intersects(&wall) {
+        return None;
+    }
+
+    let closest = wall.closest_point(player.center());
+    let offset = player.center() - closest;
+    let side = if offset.x.abs() > offset.y.abs() {
+        if offset.x < 0. {
+            Collision::Left
+        } else {
+            Collision::Right
+        }
+    } else if offset.y > 0. {
+        Collision::Top
+    } else {
+        Collision::Bottom
+    };
+
+    Some(side)
+}
+
 
 pub struct MovementPlugin;
 
